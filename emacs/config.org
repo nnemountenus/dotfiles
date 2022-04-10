@@ -1,222 +1,368 @@
-#+TITLE: Emacs Configuration
+#+title: Emacs Configuration
 #+AUTHOR: Nnemo Untenus
 #+OPTIONS: num:nil
 
-Так, это мой конфиг .emacs, сделанный в виде Org файла.
-Он загружается с помощью Org-babel.
+Мой конфиг .emacs, сделанный в виде Org файла.
+Он загружается с помощью org-babel.
 
-* Репозитории и стандартные пакеты
-** Melpa
-Репозиторий, который содержит очень ОЧЕНЬ много пакетов
-для EMACS.
+* Репозитории
+  #+BEGIN_SRC emacs-lisp
+    (require 'package)
+    (add-to-list 'package-archives '("gnu"   . "https://elpa.gnu.org/packages/"))
+    (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
+  #+END_SRC
+* Общие настройки
+** Использование use-package
+   use-package позволяет держать конфиг
+   более чистым и эффективным
 
-#+BEGIN_SRC emacs-lisp
- (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/"))
- (package-initialize)
-#+END_SRC
+   #+BEGIN_SRC emacs-lisp
+     (unless (package-installed-p 'use-package)
+       (package-refresh-contents)
+       (package-install 'use-package))
+     (eval-and-compile
+       ;; не нужно каждый раз указывать ensure
+       (setq use-package-always-ensure t
+	     use-package-expand-minimally t))
 
+     ;; использовать в :hook полные имена хуков
+     ;; благодаря этому можно использовать нестандартные хуки
+     (setq use-package-hook-name-suffix nil)
+   #+END_SRC
 ** Синхронизация окружения оболочки и EMACS
-#+BEGIN_SRC emacs-lisp
- (when (memq window-system '(mac ns x))
- (exec-path-from-shell-initialize))
-#+END_SRC
-** Без стартового окна и сообщения
-#+BEGIN_SRC emacs-lisp
- (setq inhibit-splash-screen   t)
- (setq ingibit-startup-message t)
-#+END_SRC
-** Использование русской раскладки
-#+BEGIN_SRC emacs-lisp
- (defun cfg:reverse-input-method (input-method)
-  "Build the reverse mapping of single letters from INPUT-METHOD."
-  (interactive
-   (list (read-input-method-name "Use input method (default current): ")))
-  (if (and input-method (symbolp input-method))
-      (setq input-method (symbol-name input-method)))
-  (let ((current current-input-method)
-        (modifiers '(nil (control) (meta) (control meta))))
-    (when input-method
-      (activate-input-method input-method))
-    (when (and current-input-method quail-keyboard-layout)
-      (dolist (map (cdr (quail-map)))
-        (let* ((to (car map))
-               (from (quail-get-translation
-                      (cadr map) (char-to-string to) 1)))
-          (when (and (characterp from) (characterp to))
-            (dolist (mod modifiers)
-              (define-key local-function-key-map
-                (vector (append mod (list from)))
-                (vector (append mod (list to)))))))))
-    (when input-method
-      (activate-input-method current))))
+   EMACS получает окружение из пользовательской оболочки
 
-(cfg:reverse-input-method 'russian-computer)
-#+END_SRC
-** Сохранять сессию при выходе
-#+BEGIN_SRC emacs-lisp
- (desktop-save-mode 1)
-#+END_SRC
+   #+BEGIN_SRC emacs-lisp
+     (exec-path-from-shell-initialize)
+   #+END_SRC
+** Без стартового окна и сообщения
+   #+BEGIN_SRC emacs-lisp
+     (setq inhibit-splash-screen   t)
+     (setq ingibit-startup-message t)
+   #+END_SRC
+** Команды в русской раскладке
+   #+BEGIN_SRC emacs-lisp
+     (defun cfg:reverse-input-method (input-method)
+       "Build the reverse mapping of single letters from INPUT-METHOD."
+       (interactive
+	(list (read-input-method-name "Use input method (default current): ")))
+       (if (and input-method (symbolp input-method))
+	   (setq input-method (symbol-name input-method)))
+       (let ((current current-input-method)
+	     (modifiers '(nil (control) (meta) (control meta))))
+	 (when input-method
+	   (activate-input-method input-method))
+	 (when (and current-input-method quail-keyboard-layout)
+	   (dolist (map (cdr (quail-map)))
+	     (let* ((to (car map))
+		    (from (quail-get-translation
+			   (cadr map) (char-to-string to) 1)))
+	       (when (and (characterp from) (characterp to))
+		 (dolist (mod modifiers)
+		   (define-key local-function-key-map
+		     (vector (append mod (list from)))
+		     (vector (append mod (list to)))))))))
+	 (when input-method
+	   (activate-input-method current))))
+
+     (cfg:reverse-input-method 'russian-computer)
+   #+END_SRC
+** Отключение автосохранения
+   #+BEGIN_SRC emacs-lisp
+     (setq make-backup-files nil)
+     (setq auto-save-default nil)
+     (setq create-lockfiles nil) 
+   #+END_SRC
+** Папка для сторонних файлов
+   #+BEGIN_SRC emacs-lisp
+     (add-to-list 'load-path "~/.emacs.d/lisp/")
+   #+END_SRC
+** Привязки клавиш
+   #+BEGIN_SRC emacs-lisp
+     ;; C-x l показывает номера строк
+     (global-unset-key (kbd "C-x l"))
+     (global-set-key (kbd "C-x l") 'display-line-numbers-mode)
+
+     ;; отмена бесполезных комбинаций
+     (global-unset-key (kbd "C-x f"))
+     (global-unset-key (kbd "C-z"))
+
+     ;; C-c C-c запускает компиляцию для C-программ 
+     (eval-after-load 'cc-mode '(define-key c-mode-map (kbd "C-c C-c") 'compile))
+   #+END_SRC
+** Настройка отступов
+   #+BEGIN_SRC emacs-lisp
+     (setq-default
+      indent-tabs-mode t
+      c-basic-indent 8
+      c-basic-offset 8
+      tab-width 8)
+   #+END_SRC
+* Разработка
+** Выделять выражения между скобками
+   #+BEGIN_SRC emacs-lisp
+     (show-paren-mode t)
+     (setq show-paren-style 'expression)
+   #+END_SRC
+** Отключить выравнивание electric (оно работает не очень)
+   #+BEGIN_SRC emacs-lisp
+     (electric-indent-mode -1)
+   #+END_SRC
+** Включить парные скобки
+   #+BEGIN_SRC emacs-lisp
+     (electric-pair-mode 1)
+   #+END_SRC
+** Подсвечивать результат поиска и замены
+   #+BEGIN_SRC emacs-lisp
+     (setq search-highlight        t)
+     (setq query-replace-highlight t)
+   #+END_SRC
+** C
+*** Проверка синтаксиса flycheck
+    #+BEGIN_SRC emacs-lisp
+      (add-hook 'after-init-hook #'global-flycheck-mode)
+      (eval-after-load 'flycheck
+	'(add-hook 'flycheck-mode-hook #'flycheck-checkpatch-setup))
+      (add-hook 'c-mode-common-hook 'flycheck-mode)
+    #+END_SRC
+*** Сборка для automake
+    #+BEGIN_SRC emacs-lisp
+      (add-hook 'c-mode-hook
+		(lambda ()
+		  (set (make-local-variable 'compile-command) "cd ../.build-x86 && make")))
+    #+END_SRC
 * Внешний вид
+** Настройки окон
+   #+BEGIN_SRC emacs-lisp
+     (setq default-frame-alist 
+	   ;; отключить скролл-бары
+	   '((vertical-scroll-bars . nil)
+	     ;; развернуть окна
+	       (fullscreen . maximized)))
+   #+END_SRC
 ** Удаление компонентов GUI
 *** Удаление подсказок
-#+BEGIN_SRC emacs-lisp
- (tooltip-mode      -1)
-#+END_SRC
+    #+BEGIN_SRC emacs-lisp
+      (tooltip-mode 0)
+    #+END_SRC
 *** Удаление графического меню
-#+BEGIN_SRC emacs-lisp
- (menu-bar-mode     -1)
-#+END_SRC
+    #+BEGIN_SRC emacs-lisp
+      (menu-bar-mode 0)
+    #+END_SRC
 *** Удаление тулбара
-#+BEGIN_SRC emacs-lisp
- (tool-bar-mode     -1)
-#+END_SRC
-*** Удаление полосы прокрутки
-#+BEGIN_SRC emacs-lisp
- (scroll-bar-mode   -1)
-#+END_SRC
+    #+BEGIN_SRC emacs-lisp
+      (tool-bar-mode 0)
+    #+END_SRC
 *** Курсор не мигает
-#+BEGIN_SRC emacs-lisp
- (blink-cursor-mode -1)
-#+END_SRC
-*** Без графических диалогов и окон
-#+BEGIN_SRC emacs-lisp
- (setq use-dialog-box     nil)
-#+END_SRC
+    #+BEGIN_SRC emacs-lisp
+      (blink-cursor-mode 0)
+    #+END_SRC
+*** Без графических диалогов
+    #+BEGIN_SRC emacs-lisp
+      (setq use-dialog-box     nil)
+    #+END_SRC
 *** Лучшая прорисовка буфера
-#+BEGIN_SRC emacs-lisp
- (setq redisplay-dont-pause t)
-#+END_SRC
+    #+BEGIN_SRC emacs-lisp
+      (setq redisplay-dont-pause t)
+    #+END_SRC
 *** Отключить звуковой сигнал
-#+BEGIN_SRC emacs-lisp
- (setq ring-bell-function 'ignore)
-#+END_SRC
-** Настройка mode-line
-*** 24-часовой формат времени
-#+BEGIN_SRC emacs-lisp
- (setq display-time-24hr-format t)
-#+END_SRC
-*** Показывать часы
-#+BEGIN_SRC emacs-lisp
-(display-time-mode             t)
-#+END_SRC
-*** Показывать размер файла в %
-#+BEGIN_SRC emacs-lisp
- (size-indication-mode          t)
-#+END_SRC
+    #+BEGIN_SRC emacs-lisp
+      (setq ring-bell-function 'ignore)
+    #+END_SRC
 ** Имя текущего буфера в заголовке 
-#+BEGIN_SRC emacs-lisp
- (setq frame-title-format "GNU Emacs: %b")
-#+END_SRC
+   #+BEGIN_SRC emacs-lisp
+     (setq frame-title-format "emacs: %b")
+   #+END_SRC
 ** Тема
-#+BEGIN_SRC emacs-lisp
- (load-theme 'hc-zenburn t)
-#+END_SRC
-* Режимы работы
-** Общее
-*** Никогда не использовать табы, отступ 2
-#+BEGIN_SRC emacs-lisp
- (setq-default
- indent-tabs-mode nil
- c-basic-indent 2
- c-basic-offset 2
- tab-width 2)
-#+END_SRC
-** Разработка
-*** Автодополнение
-#+BEGIN_SRC emacs-lisp
- (require 'auto-complete)
- (require 'auto-complete-config)
- (ac-config-default)
-#+END_SRC
-*** Выделять выражения между скобками
-#+BEGIN_SRC emacs-lisp
- (show-paren-mode t)
- (setq show-paren-style 'expression)
-#+END_SRC
-*** Отключить выравнивание electric (оно работает не очень)
-#+BEGIN_SRC emacs-lisp
- (electric-indent-mode -1)
-#+END_SRC
-*** Включить парные скобки
-#+BEGIN_SRC emacs-lisp
- (electric-pair-mode 1)
-#+END_SRC
-*** Подсвечивать результат поиска и замены
-#+BEGIN_SRC emacs-lisp
- (setq search-highlight        t)
- (setq query-replace-highlight t)
-#+END_SRC
-** Org
-*** Установка
-#+BEGIN_SRC emacs-lisp
- (require 'org-install)
-#+END_SRC
-*** Ассоциация с .org файлами
-#+BEGIN_SRC emacs-lisp
- (add-to-list 'auto-mode-alist '("\\.org$" . org-mode))
- (setq org-log-don t)
-#+END_SRC
-*** Добавление Org-babel
-#+BEGIN_SRC emacs-lisp
- (setq org-plantuml-jar-path (expand-file-name "/home/nnemo/.emacs.d/plantuml.jar"))
- (with-eval-after-load "org"
-   (add-to-list 'org-src-lang-modes '("plantuml" . plantuml)))
+   #+BEGIN_SRC emacs-lisp
+     (load-theme 'hc-zenburn t)
+   #+END_SRC
+** Шрифт
+   #+BEGIN_SRC emacs-lisp
+     (when (member "Fira Code" (font-family-list))
+       (set-frame-font "Fira Code" t t))
+   #+END_SRC
+* Пакеты
+** dashboard: доска задач
+   Использую в качестве главного экрана.
+   Запускается при входе и при открывании нового окна.
 
- (setq org-babel-python-command "python3")
+   #+BEGIN_SRC emacs-lisp
+     (use-package dashboard
+       :hook
+       ;; открывать в новых окнах
+       (after-make-frame-functions . (lambda (frame)
+				       (select-frame frame)
+				       (switch-to-buffer "*dashboard*")))
+       :config
+       ;; dashboard при запуске
+       (dashboard-setup-startup-hook)
+       ;; заголовки разделов с иконками
+       (setq dashboard-set-heading-icons t)
+       ;; файлы с иконками
+       (setq dashboard-set-file-icons t)
+       ;; выравнивание по центру
+       (setq dashboard-center-content t)
+       ;; настройка содержимого: пять 
+       (setq dashboard-items '((recents  . 5)
+			       (bookmarks . 10)))
+       ;; без стартовой информации 
+       (setq dashboard-set-init-info nil)
+       ;; без подписи к логотипу
+       (setq dashboard-banner-logo-title nil)
+       ;; свой логотип
+       (setq dashboard-startup-banner "/home/nnemo/.emacs.d/dashboard_banners/koi.png")
+       ;; другие строки в футере
+       (setq dashboard-footer-messages '( "The essence of philosophy is that a man should so live that his happiness shall depend as little as possible on external things."
+					 "People are not disturbed by things, but by the view they take of them."
+					 "It’s not what happens to you, but how you react to it that matters."
+					 "We have two ears and one mouth so that we can listen twice as much as we speak."
+					 "Wealth consists not in having great possessions, but in having few wants."
+					 "Keep silence for the most part, and speak only when you must, and then briefly."
+					 "We should not moor a ship with one anchor, or our life with one hope."
+					 "Difficulties are things that show a person what they are."
+					 "There is only one way to happiness and that is to cease worrying about things which are beyond the power of our will."
+					 "It takes more than just a good looking body. You’ve got to have the heart and soul to go with it."
+					 "Make the best use of what is in your power, and take the rest as it happens."
+					 "No man is free who is not master of himself."
+					 "Don’t explain your philosophy. Embody it."))
+       )
+   #+END_SRC
+** winum: переключение буферов
+   #+BEGIN_SRC emacs-lisp
+     (use-package winum
+       :config
+       (winum-mode)
+       )
+   #+END_SRC
+** popwin: компиляция в всплывающем окне
+   #+BEGIN_SRC emacs-lisp
+     (use-package popwin
+       :config
+       (popwin-mode 1)
+       )
+   #+END_SRC
+** all-the-icons: иконки
+   #+BEGIN_SRC emacs-lisp
+     (use-package all-the-icons)
+   #+END_SRC
+** auto-complete
+   #+BEGIN_SRC emacs-lisp
+     (use-package auto-complete)
+     (use-package auto-complete-config
+       :config
+       ;; стандартный конфиг
+       (ac-config-default)
+       )
+   #+END_SRC
+** org: органайзер и не только
+   #+BEGIN_SRC emacs-lisp
+     (use-package org-install
+       :ensure nil
+       :mode
+       ("\\.org$" . org-mode)
+       :init
+       ;; использовать шрифт в блоках кода
+       (setq org-src-fontify-natively t)
+       ;; использовать выравнивание в блоках кода
+       (setq org-src-tab-acts-natively t)
+       :config
+       (setq org-log-don t)
+       ;; генератор UML-схем для org-babel
+       (setq org-plantuml-jar-path (expand-file-name "/home/nnemo/.emacs.d/plantuml.jar"))
+       (with-eval-after-load "org"
+	 (add-to-list 'org-src-lang-modes '("plantuml" . plantuml)))
+       ;; команда для запуска python-кода в org-babel
+       (setq org-babel-python-command "python3")
+       ;; выбор языков для org-babel
+       (org-babel-do-load-languages
+	'org-babel-load-languages
+	'((R . t)
+	  (emacs-lisp . t)
+	  (python . t)
+	  (lua . t)
+	  (plantuml . t)))
+       )
+   #+END_SRC
+*** org-bullets: маркеры в org
+    #+BEGIN_SRC emacs-lisp
+      (use-package org-bullets
+	:hook
+	(org-mode-hook . (lambda () (org-bullets-mode 1)))
+	)
+    #+END_SRC
+** dired: файловый менеджер
+   #+BEGIN_SRC emacs-lisp
+     (use-package dired
+       :ensure nil
+       ;; "." чтобы скрыть файлы с точкой
+       :bind (:map dired-mode-map
+              ("." . dired-hide-dotfiles-mode))
+       :hook
+       ;; сокращенный режим
+       (dired-mode-hook . dired-hide-details-mode)
+       ;; скрыть файлы с точкой
+       (dired-mode-hook . dired-hide-dotfiles-mode)
 
- (org-babel-do-load-languages
-  'org-babel-load-languages
-  '((R . t)
-    (emacs-lisp . t)
-    (python . t)
-    (plantuml . t)))
- (setq org-src-fontify-natively t)
-#+END_SRC
-*** Красивые маркеры в Org
-#+BEGIN_SRC emacs-lisp
- (require 'org-bullets)
- (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
-#+END_SRC
-** Dired
-*** Установка
-#+BEGIN_SRC emacs-lisp
-(require 'dired)
-(setq dired-recursive-deleter 'top)
-#+END_SRC
-*** Сокращенный режим (спасибо Xah Lee)
-#+BEGIN_SRC emacs-lisp
- (defun xah-dired-mode-setup ()
-  "to be run as hook for `dired-mode'."
-  (dired-hide-details-mode 1))
-(add-hook 'dired-mode-hook 'xah-dired-mode-setup)
-#+END_SRC
-*** Не показывать скрытые файлы
-#+BEGIN_SRC emacs-lisp
- (defun my-dired-mode-hook ()
-  "My `dired' mode hook."
-  (dired-hide-dotfiles-mode))
-#+END_SRC
-*** Скрыть/показать скрытые по "."
-#+BEGIN_SRC emacs-lisp
- (define-key dired-mode-map "." #'dired-hide-dotfiles-mode)
- (add-hook 'dired-mode-hook #'my-dired-mode-hook)
-#+END_SRC
-** iBuffer
-*** Добавление и замена list-buffers
-#+BEGIN_SRC emacs-lisp
- (require 'bs)
- (require 'ibuffer)
- (defalias 'list-buffers 'ibuffer) 
-#+END_SRC
-*** Группирование по GIT-проектам
-#+BEGIN_SRC emacs-lisp
- (add-hook 'ibuffer-hook
-          (lambda ()
-            (ibuffer-vc-set-filter-groups-by-vc-root)
-            (unless (eq ibuffer-sorting-mode 'alphabetic)
-              (ibuffer-do-sort-by-alphabetic))))
-#+END_SRC
-*** Поддержка группирования GIT на удаленных машинах
-#+BEGIN_SRC emacs-lisp
- (setq ibuffer-vc-skip-if-remote nil)
-#+END_SRC
+       :config
+       (setq dired-recursive-deleter 'top)
+
+       ;; двухпанельны режим работы
+       (setq dired-dwim-target t)
+       )
+   #+END_SRC
+*** dired-subtree: деревья
+    #+BEGIN_SRC emacs-lisp
+      (use-package dired-subtree
+	:bind (:map dired-mode-map
+		     ("i" . dired-subtree-insert)
+		     (";" . dired-subtree-remove))
+	)
+    #+END_SRC
+** lsp-mode: lsp-клиент
+   #+BEGIN_SRC emacs-lisp
+     (use-package lsp-mode
+       :commands lsp
+       :hook ((lua-mode) . lsp)
+       )
+     (use-package lsp-ui)
+   #+END_SRC
+*** lsp-lua-emmy: lua lsp-клиент
+    #+BEGIN_SRC emacs-lisp
+      (use-package lsp-lua-emmy
+	:demand
+	:ensure nil
+	:load-path "~/lisp/"
+	:hook (lua-mode . lsp)
+	:config
+	(setq lsp-lua-emmy-jar-path (expand-file-name "EmmyLua-LS-all.jar" user-emacs-directory))
+	)
+    #+END_SRC
+** ibuffer: список открытых файлов
+   #+BEGIN_SRC emacs-lisp
+     (use-package ibuffer
+       :ensure nil
+       :hook
+       ;; группирование по GIT-проектам
+       (ibuffer-hook . (lambda ()
+			 (ibuffer-vc-set-filter-groups-by-vc-root)
+			 (unless (eq ibuffer-sorting-mode 'alphabetic)
+			   (ibuffer-do-sort-by-alphabetic))))
+       :config
+       ;; привязка C-x C-b к ibuffer
+       (defalias 'list-buffers 'ibuffer)
+       ;; группирование GIT на удаленных машинах
+       (setq ibuffer-vc-skip-if-remote nil)
+       ) 
+   #+END_SRC
+** pdf-mode: чтение PDF
+   #+BEGIN_SRC emacs-lisp
+     (use-package pdf-tools
+       :init
+       ;; инициализация pdf-tools
+       (pdf-tools-install)
+       :hook
+       ;; использование темы EMACS
+       (pdf-view-mode-hook . pdf-view-themed-minor-mode)
+       )
+   #+END_SRC
