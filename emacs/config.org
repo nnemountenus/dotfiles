@@ -2,7 +2,7 @@
 #+AUTHOR: Nnemo Untenus
 #+OPTIONS: num:nil
 
-Мой конфиг .emacs, сделанный в виде Org файла.
+Мой конфиг .emacs, сделанный в виде org файла.
 Он загружается с помощью org-babel.
 
 * Репозитории
@@ -138,7 +138,17 @@
 	   ;; отключить скролл-бары
 	   '((vertical-scroll-bars . nil)
 	     ;; развернуть окна
-	       (fullscreen . maximized)))
+	     (fullscreen . maximized)
+	     ;; рамки для полноэкранного режима
+	     ;; если перестану пользоваться панелью, то уберу
+	     (internal-border-width . 3)))
+
+     ;; показывать время в 24-ч формате
+     (setq display-time-24hr-format t)
+     (setq display-time-day-and-date t)
+     (setq display-time-default-load-average nil)
+     (setq display-time-mail-string " ")
+     (display-time-mode             t)
    #+END_SRC
 ** Удаление компонентов GUI
 *** Удаление подсказок
@@ -171,7 +181,7 @@
     #+END_SRC
 ** Имя текущего буфера в заголовке 
    #+BEGIN_SRC emacs-lisp
-     (setq frame-title-format "emacs: %b")
+     (setq frame-title-format "%b")
    #+END_SRC
 ** Тема
    #+BEGIN_SRC emacs-lisp
@@ -203,7 +213,7 @@
        (setq dashboard-set-file-icons t)
        ;; выравнивание по центру
        (setq dashboard-center-content t)
-       ;; настройка содержимого: пять 
+       ;; настройка содержимого
        (setq dashboard-items '((recents  . 5)
 			       (bookmarks . 10)))
        ;; без стартовой информации 
@@ -248,12 +258,12 @@
    #+END_SRC
 ** auto-complete
    #+BEGIN_SRC emacs-lisp
-     (use-package auto-complete)
-     (use-package auto-complete-config
-       :config
-       ;; стандартный конфиг
-       (ac-config-default)
-       )
+     ;; (use-package auto-complete)
+     ;; (use-package auto-complete-config
+     ;;   :config
+     ;;   ;; стандартный конфиг
+     ;;   (ac-config-default)
+     ;;   )
    #+END_SRC
 ** org: органайзер и не только
    #+BEGIN_SRC emacs-lisp
@@ -322,10 +332,18 @@
 ** lsp-mode: lsp-клиент
    #+BEGIN_SRC emacs-lisp
      (use-package lsp-mode
-       :commands lsp
-       :hook ((lua-mode) . lsp)
+       :hook (c-mode-hook . lsp)
+       :config
+       (setq lsp-log-io t)
+       (setq lsp-enable-snippet nil)
+       (setq lsp-completion-provider :none)
+       (setq lsp-diagnostics-provider :none)
+       (setq lsp-enable-on-type-formatting nil)
        )
-     (use-package lsp-ui)
+
+     (use-package lsp-ui
+       :commands lsp-ui-mode
+       )
    #+END_SRC
 *** lsp-lua-emmy: lua lsp-клиент
     #+BEGIN_SRC emacs-lisp
@@ -337,6 +355,18 @@
 	:config
 	(setq lsp-lua-emmy-jar-path (expand-file-name "EmmyLua-LS-all.jar" user-emacs-directory))
 	)
+    #+END_SRC
+*** lsp-treemacs: дерево функций
+    #+BEGIN_SRC emacs-lisp
+      (lsp-treemacs-sync-mode 1)
+    #+END_SRC
+*** remote c lsp
+    #+BEGIN_SRC emacs-lisp
+      (lsp-register-client
+	  (make-lsp-client :new-connection (lsp-tramp-connection '("clangd" "--log=verbose" "--pretty" "-j=1"))
+			   :major-modes '(c-mode)
+			   :remote? t
+			   :server-id 'clangd-remote))
     #+END_SRC
 ** ibuffer: список открытых файлов
    #+BEGIN_SRC emacs-lisp
@@ -365,4 +395,15 @@
        ;; использование темы EMACS
        (pdf-view-mode-hook . pdf-view-themed-minor-mode)
        )
+   #+END_SRC
+** elfeed: RSS лента
+   #+BEGIN_SRC emacs-lisp
+     (setq elfeed-feeds
+	   '("https://www.pravda.ru/export.xml"))
+   #+END_SRC
+   
+** company: автодополнение
+   #+BEGIN_SRC emacs-lisp
+     (setq company-minimum-prefix-length 1
+	   company-idle-delay 0.0) ;; default is 0.2
    #+END_SRC
