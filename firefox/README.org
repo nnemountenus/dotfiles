@@ -1,29 +1,32 @@
 #+TITLE: Минималистичный Firefox
 
+Минимум отвлекающих деталей с помощью пользовательских стилей и дополнения.
+* Результат
 [[img/firefox.png]]
-
-  Минимум отвлекающих деталей с помощью пользовательских стилей и дополнения.
 
 * Установка
 ** userChrome
 *** Разрешить использовать пользовательские стили
-**** Набрать в строке поиска:
+**** 1. Набрать в строке поиска:
   #+BEGIN_SRC
   about:config
   #+END_SRC
-**** На открывшейся странице найти свойство
+**** 2. На открывшейся странице найти свойство
   #+BEGIN_SRC
   toolkit.legacyUserProfileCustomizations.stylesheets
   #+END_SRC
-**** Перевести свойство в true
+**** 3. Перевести свойство в 
+  #+BEGIN_SRC
+  true
+  #+END_SRC
 *** Добавить файл userChrome.css
-**** Набрать в строке поиска
+**** 1. Набрать в строке поиска
   #+BEGIN_SRC
   about:profiles
   #+END_SRC
-**** Открыть самую верхнюю папку (Open Directory)
-**** Создать в ней папку "chrome"
-**** Поместить файл userChrome.css в chrome
+**** 2. Открыть самую верхнюю папку (Open Directory)
+**** 3. Создать в ней папку "chrome"
+**** 4. Поместить файл userChrome.css в chrome
 ** [[https://addons.mozilla.org/en-US/firefox/addon/tree-style-tab/?utm_source=addons.mozilla.org&utm_medium=referral&utm_content=search][Tree Style Tab]]   
    Боковые вкладки очень удобные, когда их много, плюс можно сразу целые ветки закрывать.
 
