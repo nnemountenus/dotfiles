@@ -1,0 +1,14 @@
+/* скрывает табы */
+#TabsToolbar {
+    visibility: collapse !important;
+}
+
+/* скрывает заголовок у боковой панели */
+#sidebar-header {
+    display: none;
+}
+
+/* скрывает полосу прокрутки */
+:root {
+    scrollbar-width: none;
+}
